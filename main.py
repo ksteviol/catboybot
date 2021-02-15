@@ -172,7 +172,8 @@ def main():
             print(response['message'])
         if 'ts' in response:
             data['ts'] = response['ts']
-        updates = response['updates']
+        if 'updates' in response:
+            updates = response['updates']
         if not updates:
             pass
         else:
