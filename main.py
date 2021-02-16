@@ -158,24 +158,28 @@ def main():
         print(data)
         response = requests.get(
             f"{server}?act=a_check&key={key}&wait=25&mode=2&ts={ts}&version=2").json()
-        ts = response['ts']
-        if 'failed' in response:
-            if response['failed'] == 2:
-                data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
-                                    params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
-                key = data['key']
-            elif response['failed'] == '3':
-                data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
-                                    params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
-                key = data['key']
-                ts = data['ts']
-        updates = response['updates']
-        if not updates: continue
-        for update in updates:
-            if update['type'] == 'message_new':
-                message = update['object']['message']
-                print(message)
-                check_message(message)
+        print(response)
+        if 'failed' not in response:
+            ts = response['ts']
+            updates = response['updates']
+            for update in updates:
+                if update['type'] == 'message_new':
+                    message = update['object']['message']
+                    print(message)
+                    check_message(message)
+        elif response['failed'] == 1:
+            data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
+                                params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
+            ts = response['ts']
+        elif response['failed'] == 2:
+            data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
+                                params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
+            key = data['key']
+        elif response['failed'] == 3:
+            data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
+                                params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
+            key = data['key']
+            ts = data['ts']
 
 
 if __name__ == "__main__":
