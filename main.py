@@ -146,6 +146,11 @@ def check_message(message):
         message_send(peer_id, 'uwu')
     if text == 'uwu':
         message_send(peer_id, 'owo')
+    if text == 'n':
+        message_send(peer_id, 'I')
+    if text == 'e':
+        message_send(peer_id, 'R')
+
 
 
 def main():
