@@ -1,2 +1,2 @@
 # catboybot
- :)
+ :3
