@@ -151,13 +151,14 @@ def check_message(message):
 def main():
     data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
                         params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
+    server = data['server']
+    ts = data['ts']
+    key = data['key']
     while True:
         print(data)
-        server = data['server']
-        ts = data['ts']
-        key = data['key']
         response = requests.get(
             f"{server}?act=a_check&key={key}&wait=25&mode=2&ts={ts}&version=2").json()
+        ts = response['ts']
         if 'failed' in response:
             if response['failed'] == 2:
                 data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
@@ -168,18 +169,11 @@ def main():
                                     params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
                 key = data['key']
                 ts = data['ts']
-        elif 'message' in response:
-            print(response['message'])
-        if 'ts' in response:
-            data['ts'] = response['ts']
-        if 'updates' in response:
-            updates = response['updates']
-        if not updates:
-            pass
-        else:
-            updates = updates[0]
-            if updates['type'] == 'message_new':
-                message = updates['object']['message']
+        updates = response['updates']
+        if not updates: continue
+        for update in updates:
+            if update['type'] == 'message_new':
+                message = update['object']['message']
                 print(message)
                 check_message(message)
 
