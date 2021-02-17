@@ -60,21 +60,7 @@ def messages_remove_chat_user(peer_id, text, from_id):
 
 
 def chance(peer_id, text):
-    text = text.replace('@все', '')
-    text = text.replace('@all', '')
-    if text == '!инфо' or text == '!шанс':
-        message_send(peer_id, f'Дружище...')
-    else:
-        text = text.replace('!инфо', '')
-        text = text.replace('!вероятность', '')
-        text = text.replace('!инфа', '')
-        text = text.replace('!шанс', '')
-        text = text.replace(' я ', ' вы ')
-        text = text.replace(' меня ', ' вас ')
-        text = text.replace(' шанс того что ', ' ')
-        text = text.replace(' того что ', ' ')
-        randpercent = random.randint(0, 100)
-        message_send(peer_id, f'Шанс того что{text} составляет примерно {randpercent}%')
+    message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
 
 
 # def say_it(peer_id, text):
