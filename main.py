@@ -59,10 +59,6 @@ def messages_remove_chat_user(peer_id, text, from_id):
                 message_send(peer_id, f'неа')
 
 
-def chance(peer_id, text):
-    message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
-
-
 # def say_it(peer_id, text):
 #     text = text.replace('!скажи ', '')
 #     message_send(peer_id, text)
@@ -83,28 +79,24 @@ def timer(peer_id, text, from_id):
     r = requests.post('https://api.vk.com/method/users.get', data).json()['response']
     print(r)
     r = r[0]
-
-    seconds = [int(i) for i in text.split() if i.isdigit()]
-
-    if not seconds or (seconds[0] > 999 or seconds[0] < 1):
-        message_send(peer_id, f'неа')
-    elif 'секунд' in text or 'секунда' in text or 'минут' in text or 'минута' in text or 'часов' in text or 'час' in text:
-        message_send(peer_id, f'неа')
+    minutes = [int(i) for i in text.split() if i.isdigit()]
+    if not minutes or (minutes[0] > 999 or minutes[0] < 1):
+        message_send(peer_id, f'слишком большое значение, попробуйте снова')
     else:
-        text = text.replace(str(seconds[0]), '')
+        text = text.replace(str(minutes[0]), '')
         if 'секунд' in text or 'секунда' in text:
+            minutes[0] /= 60
             text = text.replace('секунда', '')
             text = text.replace('секунд', '')
         elif 'минут' in text or 'минута' in text:
-            seconds[0] *= 60
             text = text.replace('минута', '')
             text = text.replace('минут', '')
         elif 'часов' in text or 'час' in text:
-            seconds[0] *= 60
+            minutes[0] *= 60
             text = text.replace('минута', '')
             text = text.replace('минут', '')
         message_send(peer_id, f'[id{from_id}|{r["first_name"]}], таймер запущен. Текст напоминания: "{text} "')
-        t1 = threading.Timer(seconds[0], timer_end, (peer_id, text, from_id, r["first_name"]))
+        t1 = threading.Timer(minutes[0], timer_end, (peer_id, text, from_id, r["first_name"]))
         t1.start()
 
 
@@ -115,7 +107,7 @@ def check_message(message):
     if '!ban' in text:
         messages_remove_chat_user(peer_id, text, from_id)
     if '!инфо' in text or '!инфа' in text or '!шанс' in text or '!вероятность' in text:
-        chance(peer_id, text)
+        message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
     #    if '!скажи' in text:
     #        say_it(peer_id, text)
     if '!timer' in text or '!таймер' in text:
@@ -146,10 +138,8 @@ def main():
     ts = data['ts']
     key = data['key']
     while True:
-        print(data)
         response = requests.get(
             f"{server}?act=a_check&key={key}&wait=25&mode=2&ts={ts}&version=2").json()
-        print(response)
         if 'failed' not in response:
             ts = response['ts']
             updates = response['updates']
