@@ -43,18 +43,27 @@ def messages_remove_chat_user(peer_id, text, from_id):
         if i["member_id"] == from_id:
             admin = i.get('is_admin', False)
             if admin is True:
-                id = re.findall(r'\d+', text)
-                id = [int(i) for i in id]
+                user_id = re.findall(r'\d+', text)
+                user_id = [int(i) for i in user_id]
+                user_id = user_id[0]
                 data = {
                     'chat_id': peer_id - 2000000000,
-                    'user_id': id[0],
-                    'member_id': id[0],
+                    'user_id': user_id,
+                    'member_id': user_id,
                     'access_token': token,
                     'v': version
                 }
                 r = requests.post('https://api.vk.com/method/messages.removeChatUser', data).json()
                 print(r)
-                message_send(peer_id, 'пользователь забанен')
+                if 'error' not in r:
+                    message_send(peer_id, 'пользователь забанен')
+                elif r['error']['error_code'] == 15:
+                    message_send(peer_id, 'невозможно забанить администратора')
+                elif r['error']['error_code'] == 935:
+                    message_send(peer_id, 'пользователь отсутствует в чате')
+                elif r['error']['error_code']:
+                    message_send(peer_id, 'произошла ошибка при выполнении команды. \n'
+                                          'проверьте корректность аргументов и попробуйте снова')
             else:
                 message_send(peer_id, f'простите но вы не являетесь вдминистратором этого чата')
 
@@ -65,7 +74,7 @@ def messages_remove_chat_user(peer_id, text, from_id):
 
 
 def timer_end(peer_id, text, from_id, first_name):
-    message_send(peer_id, f'[id{from_id}|{first_name}], вы просили напомнить о "{text} "')
+    message_send(peer_id, f'[id{from_id}|{first_name}], вы просили напомнить о\n"{text}"')
 
 
 def timer(peer_id, text, from_id):
@@ -83,20 +92,21 @@ def timer(peer_id, text, from_id):
     if not minutes or (minutes[0] > 999 or minutes[0] < 1):
         message_send(peer_id, f'слишком большое значение, попробуйте снова')
     else:
-        text = text.replace(str(minutes[0]), '')
+        text = text.replace(str(minutes[0]) + ' ', '')
+        minutes = minutes[0] * 60
         if 'секунд' in text or 'секунда' in text:
-            minutes[0] /= 60
-            text = text.replace('секунда', '')
-            text = text.replace('секунд', '')
+            minutes /= 60
+            text = text.replace('секунда ', '')
+            text = text.replace('секунд ', '')
         elif 'минут' in text or 'минута' in text:
-            text = text.replace('минута', '')
-            text = text.replace('минут', '')
+            text = text.replace('минута ', '')
+            text = text.replace('минут ', '')
         elif 'часов' in text or 'час' in text:
-            minutes[0] *= 60
-            text = text.replace('часов', '')
-            text = text.replace('час', '')
-        message_send(peer_id, f'[id{from_id}|{r["first_name"]}], таймер запущен. Текст напоминания: "{text} "')
-        t1 = threading.Timer(minutes[0], timer_end, (peer_id, text, from_id, r["first_name"]))
+            minutes *= 60
+            text = text.replace('часов ', '')
+            text = text.replace('час ', '')
+        message_send(peer_id, f'[id{from_id}|{r["first_name"]}], таймер запущен. Текст напоминания:\n"{text}"')
+        t1 = threading.Timer(minutes, timer_end, (peer_id, text, from_id, r["first_name"]))
         t1.start()
 
 
@@ -105,38 +115,38 @@ def check_message(message):
     peer_id = message['peer_id']
     from_id = message['from_id']
     if '/' in text:
-        if 'ban' in text:
+        if 'ban' in text or 'бан' in text:
             messages_remove_chat_user(peer_id, text, from_id)
-        if 'инфо' in text or 'инфа' in text or 'шанс' in text or 'вероятность' in text or 'info' in text:
+        elif 'инфо' in text or 'инфа' in text or 'шанс' in text or 'вероятность' in text or 'info' in text:
             message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
         #    if '!скажи' in text:
         #        say_it(peer_id, text)
-        if 'timer' in text or 'таймер' in text:
+        elif 'timer' in text or 'таймер' in text:
             timer(peer_id, text, from_id)
-        if text == 'test':
+        elif text == 'test':
             message_send(peer_id, 'Бот работает')
-        if text == 'help' or text == 'помощь':
+        elif text == 'help' or text == 'помощь':
             message_send(peer_id, 'список команд:\n'
                                   '/ban\n'
                                   '/info\n'
                                   '/timer\n')
             message_send(peer_id, 'Бот работает')
-
-    if text == 'соси':
+        else:
+            message_send(peer_id, 'простите но я не знаю такой киманды...')
+    elif text == 'соси':
         message_send(peer_id, 'сам соси')
-    if text == 'мяу':
+    elif text == 'мяу':
         message_send(peer_id, 'мур')
-    if text == 'мур':
+    elif text == 'мур':
         message_send(peer_id, 'мяу')
-    if text == 'owo':
+    elif text == 'owo':
         message_send(peer_id, 'uwu')
-    if text == 'uwu':
+    elif text == 'uwu':
         message_send(peer_id, 'owo')
-    if text == 'n':
+    elif text == 'n':
         message_send(peer_id, 'I')
-    if text == 'e':
+    elif text == 'e':
         message_send(peer_id, 'R')
-
 
 
 def main():
@@ -159,7 +169,7 @@ def main():
         elif response['failed'] == 1:
             data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
                                 params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
-            ts = response['ts']
+            ts = data['ts']
         elif response['failed'] == 2:
             data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
                                 params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
