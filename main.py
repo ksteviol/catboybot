@@ -1,11 +1,11 @@
 import requests
-import yaml
+import json
 import re
 import random
 import threading
 
-with open("config.yaml") as conf:
-    config = yaml.safe_load(conf)
+with open("config.json") as conf:
+    config = json.load(conf)
 
 token = config["token"]
 group = config["group"]
@@ -23,11 +23,6 @@ def message_send(peer_id, text):
     }
     r = requests.post('https://api.vk.com/method/messages.send', data).json()
     print(r)
-
-
-def data_update(peer_id):
-    data_file = open(f"{peer_id}.yaml", "a+")
-    data_file.write
 
 
 def messages_remove_chat_user(peer_id, text, from_id):
@@ -59,9 +54,9 @@ def messages_remove_chat_user(peer_id, text, from_id):
                 }
                 r = requests.post('https://api.vk.com/method/messages.removeChatUser', data).json()
                 print(r)
-                message_send(peer_id, 'Пользователь забанен')
+                message_send(peer_id, 'пользователь забанен')
             else:
-                message_send(peer_id, f'неа')
+                message_send(peer_id, f'простите но вы не являетесь вдминистратором этого чата')
 
 
 # def say_it(peer_id, text):
@@ -74,8 +69,8 @@ def timer_end(peer_id, text, from_id, first_name):
 
 
 def timer(peer_id, text, from_id):
-    text = text.replace('!таймер ', '')
-    text = text.replace('!timer ', '')
+    text = text.replace('/таймер ', '')
+    text = text.replace('/timer ', '')
     data = {
         'user_ids': from_id,
         'access_token': token,
@@ -98,8 +93,8 @@ def timer(peer_id, text, from_id):
             text = text.replace('минут', '')
         elif 'часов' in text or 'час' in text:
             minutes[0] *= 60
-            text = text.replace('минута', '')
-            text = text.replace('минут', '')
+            text = text.replace('часов', '')
+            text = text.replace('час', '')
         message_send(peer_id, f'[id{from_id}|{r["first_name"]}], таймер запущен. Текст напоминания: "{text} "')
         t1 = threading.Timer(minutes[0], timer_end, (peer_id, text, from_id, r["first_name"]))
         t1.start()
@@ -109,22 +104,24 @@ def check_message(message):
     text = message['text'].lower()
     peer_id = message['peer_id']
     from_id = message['from_id']
-    if '!ban' in text:
-        messages_remove_chat_user(peer_id, text, from_id)
-    if '!инфо' in text or '!инфа' in text or '!шанс' in text or '!вероятность' in text or '!info' in text:
-        message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
-    #    if '!скажи' in text:
-    #        say_it(peer_id, text)
-    if '!timer' in text or '!таймер' in text:
-        timer(peer_id, text, from_id)
-    if text == '!test':
-        message_send(peer_id, 'Бот работает')
-    if text == '!help' or text == '!помощь':
-        message_send(peer_id, 'список команд:\n'
-                              '!ban\n'
-                              '!info\n'
-                              '!timer\n')
-        message_send(peer_id, 'Бот работает')
+    if '/' in text:
+        if 'ban' in text:
+            messages_remove_chat_user(peer_id, text, from_id)
+        if 'инфо' in text or 'инфа' in text or 'шанс' in text or 'вероятность' in text or 'info' in text:
+            message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
+        #    if '!скажи' in text:
+        #        say_it(peer_id, text)
+        if 'timer' in text or 'таймер' in text:
+            timer(peer_id, text, from_id)
+        if text == 'test':
+            message_send(peer_id, 'Бот работает')
+        if text == 'help' or text == 'помощь':
+            message_send(peer_id, 'список команд:\n'
+                                  '/ban\n'
+                                  '/info\n'
+                                  '/timer\n')
+            message_send(peer_id, 'Бот работает')
+
     if text == 'соси':
         message_send(peer_id, 'сам соси')
     if text == 'мяу':
