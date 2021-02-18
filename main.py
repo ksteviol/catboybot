@@ -37,35 +37,39 @@ def messages_remove_chat_user(peer_id, text, from_id):
     }
     r = requests.post('https://api.vk.com/method/messages.getConversationMembers', data).json()
     print(r)
-    members = r['response']
-    print(members)
-    for i in members["items"]:
-        if i["member_id"] == from_id:
-            admin = i.get('is_admin', False)
-            if admin is True:
-                user_id = re.findall(r'\d+', text)
-                user_id = [int(i) for i in user_id]
-                user_id = user_id[0]
-                data = {
-                    'chat_id': peer_id - 2000000000,
-                    'user_id': user_id,
-                    'member_id': user_id,
-                    'access_token': token,
-                    'v': version
-                }
-                r = requests.post('https://api.vk.com/method/messages.removeChatUser', data).json()
-                print(r)
-                if 'error' not in r:
-                    message_send(peer_id, 'пользователь забанен')
-                elif r['error']['error_code'] == 15:
-                    message_send(peer_id, 'невозможно забанить администратора')
-                elif r['error']['error_code'] == 935:
-                    message_send(peer_id, 'пользователь отсутствует в чате')
-                elif r['error']['error_code']:
-                    message_send(peer_id, 'произошла ошибка при выполнении команды. \n'
-                                          'проверьте корректность аргументов и попробуйте снова')
-            else:
-                message_send(peer_id, f'простите но вы не являетесь вдминистратором этого чата')
+    if 'error' not in r:
+        members = r['response']
+        print(members)
+        for i in members["items"]:
+            if i["member_id"] == from_id:
+                admin = i.get('is_admin', False)
+                if admin is True:
+                    user_id = re.findall(r'\d+', text)
+                    user_id = [int(i) for i in user_id]
+                    user_id = user_id[0]
+                    data = {
+                        'chat_id': peer_id - 2000000000,
+                        'user_id': user_id,
+                        'member_id': user_id,
+                        'access_token': token,
+                        'v': version
+                    }
+                    r = requests.post('https://api.vk.com/method/messages.removeChatUser', data).json()
+                    print(r)
+                    if 'error' not in r:
+                        message_send(peer_id, 'пользователь забанен')
+                    elif r['error']['error_code'] == 15:
+                        message_send(peer_id, 'невозможно забанить администратора')
+                    elif r['error']['error_code'] == 935:
+                        message_send(peer_id, 'пользователь отсутствует в чате')
+                    elif r['error']['error_code']:
+                        message_send(peer_id, 'произошла ошибка при выполнении команды. \n'
+                                              'проверьте корректность аргументов и попробуйте снова')
+                else:
+                    message_send(peer_id, f'простите но вы не являетесь администратором этого чата')
+    elif r['error']['error_code'] == 917:
+        message_send(peer_id, 'я не могу выполнить данную команду без прав администратора')
+
 
 
 # def say_it(peer_id, text):
@@ -158,6 +162,7 @@ def main():
     while True:
         response = requests.get(
             f"{server}?act=a_check&key={key}&wait=25&mode=2&ts={ts}&version=2").json()
+        print(response)
         if 'failed' not in response:
             ts = response['ts']
             updates = response['updates']
@@ -166,6 +171,12 @@ def main():
                     message = update['object']['message']
                     print(message)
                     check_message(message)
+                    if 'action' in message:
+                        if message['action']['type'] == 'chat_invite_user':
+                            if message['action']['member_id'] == '-202593259':
+                                message_send(message['peer_id'], 'приветствую')
+                            else:
+                                message_send(message['peer_id'], 'добро пожаловать')
         elif response['failed'] == 1:
             data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
                                 params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
