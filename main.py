@@ -1,11 +1,11 @@
 import requests
-import json
+import yaml
 import re
 import random
 import threading
 
-with open("config.json", "r") as conf:
-    config = json.load(conf)
+with open("config.yaml") as conf:
+    config = yaml.safe_load(conf)
 
 token = config["token"]
 group = config["group"]
@@ -23,6 +23,11 @@ def message_send(peer_id, text):
     }
     r = requests.post('https://api.vk.com/method/messages.send', data).json()
     print(r)
+
+
+def data_update(peer_id):
+    data_file = open(f"{peer_id}.yaml", "a+")
+    data_file.write
 
 
 def messages_remove_chat_user(peer_id, text, from_id):
@@ -106,13 +111,19 @@ def check_message(message):
     from_id = message['from_id']
     if '!ban' in text:
         messages_remove_chat_user(peer_id, text, from_id)
-    if '!инфо' in text or '!инфа' in text or '!шанс' in text or '!вероятность' in text:
+    if '!инфо' in text or '!инфа' in text or '!шанс' in text or '!вероятность' in text or '!info' in text:
         message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
     #    if '!скажи' in text:
     #        say_it(peer_id, text)
     if '!timer' in text or '!таймер' in text:
         timer(peer_id, text, from_id)
     if text == '!test':
+        message_send(peer_id, 'Бот работает')
+    if text == '!help' or text == '!помощь':
+        message_send(peer_id, 'список команд:\n'
+                              '!ban\n'
+                              '!info\n'
+                              '!timer\n')
         message_send(peer_id, 'Бот работает')
     if text == 'соси':
         message_send(peer_id, 'сам соси')
