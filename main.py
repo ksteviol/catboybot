@@ -3,6 +3,7 @@ import json
 import re
 import random
 import threading
+import os
 
 with open("config.json") as conf:
     config = json.load(conf)
@@ -25,7 +26,71 @@ def message_send(peer_id, text):
     print(r)
 
 
-def messages_remove_chat_user(peer_id, text, from_id):
+def update_chat_settings(record_type, record, peer_id):
+    chats_path = f"C:\catboybot\chats\{str(peer_id)}.json"
+    if record_type == 'register_chat':
+        folder_path = os.path.dirname(chats_path)  # Путь к папке с файлом
+        if not os.path.exists(folder_path):  # Если пути не существует создаем его
+            os.makedirs(folder_path)
+        data = {
+            'peer_id': record,
+            'muted': [],
+            'banned': [],
+            'rank1': [],
+            'rank2': [],
+            'rank3': [],
+            'rank4': [],
+            'rank5': [],
+        }
+        with open(chats_path, 'w') as write_chat_settings:
+            json.dump(data, write_chat_settings, indent=4)
+        return None
+    with open(chats_path, 'r') as read_chat_settings:
+        data = json.load(read_chat_settings)
+        if record_type == 'rank1':
+            data['rank1'].append(str(record))
+        if record_type == 'rank2':
+            data['rank2'].append(str(record))
+        if record_type == 'rank3':
+            data['rank3'].append(str(record))
+        if record_type == 'rank4':
+            data['rank4'].append(str(record))
+        if record_type == 'rank5':
+            data['rank5'].append(str(record))
+        if record_type == 'ban':
+            data['banned'].append(str(record))
+        if record_type == 'mute':
+            data['muted'].append(str(record))
+        if record_type == 'unban':
+            data['banned'].remove(str(record))
+        if record_type == 'unmute':
+            data['muted'].remove(str(record))
+    with open(chats_path, 'w') as write_chat_settings:
+        json.dump(data, write_chat_settings, indent=4)
+
+
+def check_admin(peer_id, user_id):
+    chats_path = f"C:\catboybot\chats\{str(peer_id)}.json"
+    with open(chats_path, 'r') as read_chat_settings:
+        data = json.load(read_chat_settings)
+    if str(user_id) in data['rank5']:
+        return True
+
+
+def check_ban(peer_id, user_id, from_id):
+    chats_path = f"C:\catboybot\chats\{str(peer_id)}.json"
+    with open(chats_path, 'r') as read_chat_settings:
+        data = json.load(read_chat_settings)
+    if str(user_id) in data['banned']:
+        if not check_admin(peer_id, from_id) is True:
+            remove_chat_user(peer_id, 0, user_id, 'autoban')
+        else:
+            message_send(peer_id, 'администратор пригласил забаненного участника\n'
+                                  'удалаю его из списка бан листа')
+            update_chat_settings('unban', user_id, peer_id)
+
+
+def check_admins(peer_id):
     data = {
         'peer_id': peer_id,
         'offset': '0',
@@ -41,41 +106,109 @@ def messages_remove_chat_user(peer_id, text, from_id):
         members = r['response']
         print(members)
         for i in members["items"]:
-            if i["member_id"] == from_id:
-                admin = i.get('is_admin', False)
-                if admin is True:
-                    user_id = re.findall(r'\d+', text)
-                    user_id = [int(i) for i in user_id]
-                    user_id = user_id[0]
-                    data = {
-                        'chat_id': peer_id - 2000000000,
-                        'user_id': user_id,
-                        'member_id': user_id,
-                        'access_token': token,
-                        'v': version
-                    }
-                    r = requests.post('https://api.vk.com/method/messages.removeChatUser', data).json()
-                    print(r)
-                    if 'error' not in r:
-                        message_send(peer_id, 'пользователь забанен')
-                    elif r['error']['error_code'] == 15:
-                        message_send(peer_id, 'невозможно забанить администратора')
-                    elif r['error']['error_code'] == 935:
-                        message_send(peer_id, 'пользователь отсутствует в чате')
-                    elif r['error']['error_code']:
-                        message_send(peer_id, 'произошла ошибка при выполнении команды. \n'
-                                              'проверьте корректность аргументов и попробуйте снова')
-                else:
-                    message_send(peer_id, f'простите но вы не являетесь администратором этого чата')
-    elif r['error']['error_code'] == 917:
-        message_send(peer_id, 'я не могу выполнить данную команду без прав администратора')
+            if 'is_admin' in i:
+                update_chat_settings('rank5', i["member_id"], peer_id)
 
 
+def check_mute(peer_id, user_id):
+    chats_path = f"C:\catboybot\chats\{str(peer_id)}.json"
+    with open(chats_path, 'r') as read_chat_settings:
+        data = json.load(read_chat_settings)
+    if str(user_id) in data['muted']:
+        remove_chat_user(peer_id, '0', user_id, 'muteban')
+        update_chat_settings('unmute', user_id, peer_id)
+        t1.cancel()
 
-# def say_it(peer_id, text):
-#     text = text.replace('!скажи ', '')
-#     message_send(peer_id, text)
 
+def remove_chat_user(peer_id, text, from_id, type):
+    if text == '0':
+        data = {
+            'chat_id': peer_id - 2000000000,
+            'user_id': from_id,
+            'member_id': from_id,
+            'access_token': token,
+            'v': version
+        }
+        r = requests.post('https://api.vk.com/method/messages.removeChatUser', data).json()
+        print(r)
+        if type == "autoban":
+            message_send(peer_id, 'пользователь забанен в данной беседе')
+        elif type == 'muteban':
+            message_send(peer_id, 'нарушен срок молчания\n'
+                                  'пользователь удален')
+            update_chat_settings('unmute', from_id, peer_id)
+            update_chat_settings('ban', from_id, peer_id)
+        return True
+    elif check_admin(peer_id, from_id) is True:
+        user_id = re.findall(r'\d+', text)
+        user_id = [int(i) for i in user_id]
+        user_id = user_id[0]
+        data = {
+            'chat_id': peer_id - 2000000000,
+            'user_id': user_id,
+            'member_id': user_id,
+            'access_token': token,
+            'v': version
+        }
+        r = requests.post('https://api.vk.com/method/messages.removeChatUser', data).json()
+        print(r)
+        if 'error' not in r:
+            if type == 'ban':
+                message_send(peer_id, 'пользователь забанен')
+                update_chat_settings('ban', user_id, peer_id)
+            if type == 'kick':
+                message_send(peer_id, 'пользователь исключен')
+        elif r['error']['error_code'] == 15:
+            message_send(peer_id, 'невозможно забанить администратора')
+        elif r['error']['error_code'] == 935:
+            message_send(peer_id, 'пользователь отсутствует в чате')
+        elif r['error']['error_code'] == 917:
+            message_send(peer_id, 'я не могу выполнить данную команду без прав администратора')
+        elif r['error']['error_code']:
+            message_send(peer_id, 'произошла ошибка при выполнении команды. \n'
+                                  'проверьте корректность аргументов и попробуйте снова')
+    else:
+        message_send(peer_id, f'простите но вы не являетесь администратором этого чата')
+
+
+def mute_end(peer_id, text, user_id, first_name):
+    message_send(peer_id, f'[id{user_id}|{first_name}], срок действия мута окончен')
+    update_chat_settings('unmute', user_id, peer_id)
+
+
+def mute_user(peer_id, from_id, text, key):
+    if check_admin(peer_id, from_id) is True:
+        print(text)
+        user_id = re.findall(r'\d+', text)
+        user_id = [int(i) for i in user_id if i.isdigit()]
+        minutes = user_id[1]
+        user_id = user_id[0]
+        print(user_id)
+        print(minutes)
+        if check_admin(peer_id, user_id) is True:
+            message_send(peer_id, 'невозможно выдать мут старшему администратору')
+        else:
+            data = {
+                'user_ids': user_id,
+                'access_token': token,
+                'v': version
+            }
+            r = requests.post('https://api.vk.com/method/users.get', data).json()['response']
+            print(r)
+            r = r[0]
+            if not minutes or (minutes > 999 or minutes < 1):
+                message_send(peer_id, f'слишком большое значение, попробуйте снова')
+            else:
+                minutes = minutes * 60
+                if 'секунд' in text or 'секунда' in text:
+                    minutes /= 60
+                elif 'часов' in text or 'час' in text:
+                    minutes *= 60
+                message_send(peer_id, f'[id{user_id}|{r["first_name"]}], вы в муте...')
+                global t1
+                t1 = threading.Timer(minutes, mute_end, (peer_id, text, user_id, r["first_name"]))
+                t1.start()
+            update_chat_settings('mute', user_id, peer_id,)
 
 def timer_end(peer_id, text, from_id, first_name):
     message_send(peer_id, f'[id{from_id}|{first_name}], вы просили напомнить о\n"{text}"')
@@ -115,28 +248,36 @@ def timer(peer_id, text, from_id):
 
 
 def check_message(message):
+    check_mute(message['peer_id'], message['from_id'])
     text = message['text'].lower()
     peer_id = message['peer_id']
     from_id = message['from_id']
+    text = text.replace('.', '')
     if '/' in text:
-        if 'ban' in text or 'бан' in text:
-            messages_remove_chat_user(peer_id, text, from_id)
+        if 'кик' in text or 'kick' in text:
+            remove_chat_user(peer_id, text, from_id, 'kick')
+        if 'бан' in text or 'ban' in text:
+            remove_chat_user(peer_id, text, from_id, 'ban')
+        if 'мут' in text or 'mute' in text:
+            mute_user(peer_id, from_id, text)
         elif 'инфо' in text or 'инфа' in text or 'шанс' in text or 'вероятность' in text or 'info' in text:
             message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
         #    if '!скажи' in text:
         #        say_it(peer_id, text)
         elif 'timer' in text or 'таймер' in text:
             timer(peer_id, text, from_id)
-        elif text == 'test':
+        elif 'test' in text:
             message_send(peer_id, 'Бот работает')
-        elif text == 'help' or text == 'помощь':
+        elif 'help' in text or 'помощь' in text:
             message_send(peer_id, 'список команд:\n'
                                   '/ban\n'
                                   '/info\n'
                                   '/timer\n')
-            message_send(peer_id, 'Бот работает')
+        elif 'update' in text or 'обновить' in text:
+            check_admins(peer_id)
+            message_send(peer_id, 'конфигурация обновлена')
         else:
-            message_send(peer_id, 'простите но я не знаю такой киманды...')
+            message_send(peer_id, 'простите но я не знаю такой команды...')
     elif text == 'соси':
         message_send(peer_id, 'сам соси')
     elif text == 'мяу':
@@ -156,6 +297,7 @@ def check_message(message):
 def main():
     data = requests.get('https://api.vk.com/method/groups.getLongPollServer',
                         params={'group_id': group, 'access_token': token, 'v': version}).json()['response']
+
     server = data['server']
     ts = data['ts']
     key = data['key']
@@ -173,8 +315,14 @@ def main():
                     check_message(message)
                     if 'action' in message:
                         if message['action']['type'] == 'chat_invite_user':
-                            if message['action']['member_id'] == '-202593259':
-                                message_send(message['peer_id'], 'приветствую')
+                            if message['action']['member_id'] == (0 - int(group)):
+                                message_send(message['peer_id'], 'приветствую\n'
+                                                                 'для полной функциональности мне нужна админка\n'
+                                                                 'после того как повысите меня введите команду\n'
+                                                                 '"/update" чтобы обновить конфигурацию беседы')
+                                update_chat_settings('register_chat', '0', message['peer_id'])
+                            elif True:
+                                check_ban(message['peer_id'], message['action']['member_id'], message['from_id'])
                             else:
                                 message_send(message['peer_id'], 'добро пожаловать')
         elif response['failed'] == 1:
