@@ -7,11 +7,14 @@ import os
 
 with open("config.json") as conf:
     config = json.load(conf)
+1123
 
 token = config["token"]
 group = config["group"]
 api = 'https://api.vk.com/method/'
 version = '5.130'
+chats_path = os.getcwd() + r"\chats_config"
+print(chats_path)
 
 
 def message_send(peer_id, text):
@@ -27,9 +30,9 @@ def message_send(peer_id, text):
 
 
 def update_chat_settings(record_type, record, peer_id):
-    chats_path = f"C:\catboybot\chats\{str(peer_id)}.json"
+    chat_path = chats_path + f"\\{str(peer_id)}.json"
     if record_type == 'register_chat':
-        folder_path = os.path.dirname(chats_path)  # Путь к папке с файлом
+        folder_path = os.path.dirname(chat_path)  # Путь к папке с файлом
         if not os.path.exists(folder_path):  # Если пути не существует создаем его
             os.makedirs(folder_path)
         data = {
@@ -42,51 +45,78 @@ def update_chat_settings(record_type, record, peer_id):
             'rank4': [],
             'rank5': [],
         }
-        with open(chats_path, 'w') as write_chat_settings:
+        with open(chat_path, 'w') as write_chat_settings:
             json.dump(data, write_chat_settings, indent=4)
-        return None
-    with open(chats_path, 'r') as read_chat_settings:
+        return True
+    with open(chat_path, 'r') as read_chat_settings:
         data = json.load(read_chat_settings)
         if record_type == 'rank1':
-            data['rank1'].append(str(record))
+            if record not in data['rank1']:
+                data['rank1'].append(str(record))
+            elif record in data['rank1']:
+                message_send(peer_id, 'пользователь уже имеет этот ранг')
         if record_type == 'rank2':
-            data['rank2'].append(str(record))
+            if record not in data['rank2']:
+                data['rank2'].append(str(record))
+            elif record in data['rank2']:
+                message_send(peer_id, 'пользователь уже имеет этот ранг')
         if record_type == 'rank3':
-            data['rank3'].append(str(record))
+            if record not in data['rank3']:
+                data['rank3'].append(str(record))
+            elif record in data['rank3']:
+                message_send(peer_id, 'пользователь уже имеет этот ранг')
         if record_type == 'rank4':
-            data['rank4'].append(str(record))
+            if record not in data['rank4']:
+                data['rank4'].append(str(record))
+            elif record in data['rank4']:
+                message_send(peer_id, 'пользователь уже имеет этот ранг')
         if record_type == 'rank5':
-            data['rank5'].append(str(record))
+            if record not in data['rank5']:
+                data['rank5'].append(str(record))
+            elif record in data['rank5']:
+                message_send(peer_id, 'пользователь уже имеет этот ранг')
         if record_type == 'ban':
-            data['banned'].append(str(record))
+            if record not in data['banned']:
+                data['banned'].remove(str(record))
+            elif record in data['banned']:
+                message_send(peer_id, 'пользователь уже забанен')
         if record_type == 'mute':
-            data['muted'].append(str(record))
+            if record not in data['muted']:
+                data['muted'].append(str(record))
+            elif record in data['muted']:
+                message_send(peer_id, 'пользователь уже в муте')
         if record_type == 'unban':
-            data['banned'].remove(str(record))
+            if record in data['banned']:
+                data['banned'].remove(str(record))
+            elif record not in data['banned']:
+                message_send(peer_id, 'у пользователя нет бана')
         if record_type == 'unmute':
-            data['muted'].remove(str(record))
-    with open(chats_path, 'w') as write_chat_settings:
+            if record in data['muted']:
+                data['muted'].remove(str(record))
+            elif record not in data['muted']:
+                message_send(peer_id, 'у пользователя нет мута')
+    with open(chat_path, 'w') as write_chat_settings:
         json.dump(data, write_chat_settings, indent=4)
 
 
 def check_admin(peer_id, user_id):
-    chats_path = f"C:\catboybot\chats\{str(peer_id)}.json"
-    with open(chats_path, 'r') as read_chat_settings:
+    chat_path = chats_path + f"\\{str(peer_id)}.json"
+    with open(chat_path, 'r') as read_chat_settings:
         data = json.load(read_chat_settings)
     if str(user_id) in data['rank5']:
         return True
 
 
 def check_ban(peer_id, user_id, from_id):
-    chats_path = f"C:\catboybot\chats\{str(peer_id)}.json"
-    with open(chats_path, 'r') as read_chat_settings:
+    chat_path = chats_path + f"\\{str(peer_id)}.json"
+    with open(chat_path, 'r') as read_chat_settings:
         data = json.load(read_chat_settings)
     if str(user_id) in data['banned']:
         if not check_admin(peer_id, from_id) is True:
             remove_chat_user(peer_id, 0, user_id, 'autoban')
         else:
             message_send(peer_id, 'администратор пригласил забаненного участника\n'
-                                  'удалаю его из списка бан листа')
+                                  'удалаю его из бан листа')
             update_chat_settings('unban', user_id, peer_id)
 
 
@@ -111,8 +141,8 @@ def check_admins(peer_id):
 
 
 def check_mute(peer_id, user_id):
-    chats_path = f"C:\catboybot\chats\{str(peer_id)}.json"
-    with open(chats_path, 'r') as read_chat_settings:
+    chat_path = chats_path + f"\\{str(peer_id)}.json"
+    with open(chat_path, 'r') as read_chat_settings:
         data = json.load(read_chat_settings)
     if str(user_id) in data['muted']:
         remove_chat_user(peer_id, '0', user_id, 'muteban')
@@ -210,6 +240,17 @@ def mute_user(peer_id, from_id, text, key):
                 t1.start()
             update_chat_settings('mute', user_id, peer_id,)
 
+
+def unmute_user(peer_id, from_id, text, key):
+    user_id = re.findall(r'\d+', text)
+    user_id = [int(i) for i in user_id if i.isdigit()]
+    user_id = user_id[0]
+    if check_admin(peer_id, from_id) is True:
+        update_chat_settings('unmute', user_id, peer_id)
+        message_send(peer_id, f'[id{user_id}|{r["first_name"]}], ')
+    elif key == 'auto':
+        update_chat_settings('unmute', user_id, peer_id)
+
 def timer_end(peer_id, text, from_id, first_name):
     message_send(peer_id, f'[id{from_id}|{first_name}], вы просили напомнить о\n"{text}"')
 
@@ -256,10 +297,14 @@ def check_message(message):
     if '/' in text:
         if 'кик' in text or 'kick' in text:
             remove_chat_user(peer_id, text, from_id, 'kick')
-        if 'бан' in text or 'ban' in text:
+        elif 'бан' in text or 'ban' in text:
             remove_chat_user(peer_id, text, from_id, 'ban')
-        if 'мут' in text or 'mute' in text:
-            mute_user(peer_id, from_id, text)
+        elif 'мут' in text or 'mute' in text:
+            mute_user(peer_id, from_id, text, None)
+        elif 'разбан' in text or 'unban' in text:
+            remove_chat_user(peer_id, text, from_id, 'ban')
+        elif 'размут' in text or 'unmute' in text:
+            mute_user(peer_id, from_id, text, None)
         elif 'инфо' in text or 'инфа' in text or 'шанс' in text or 'вероятность' in text or 'info' in text:
             message_send(peer_id, f'полагаю что вероятность {random.randint(0, 100)}%')
         #    if '!скажи' in text:
@@ -269,10 +314,7 @@ def check_message(message):
         elif 'test' in text:
             message_send(peer_id, 'Бот работает')
         elif 'help' in text or 'помощь' in text:
-            message_send(peer_id, 'список команд:\n'
-                                  '/ban\n'
-                                  '/info\n'
-                                  '/timer\n')
+            message_send(peer_id, 'nyi')
         elif 'update' in text or 'обновить' in text:
             check_admins(peer_id)
             message_send(peer_id, 'конфигурация обновлена')
@@ -312,15 +354,16 @@ def main():
                 if update['type'] == 'message_new':
                     message = update['object']['message']
                     print(message)
-                    check_message(message)
-                    if 'action' in message:
+                    if not 'action' in message:
+                        check_message(message)
+                    elif 'action' in message:
                         if message['action']['type'] == 'chat_invite_user':
                             if message['action']['member_id'] == (0 - int(group)):
                                 message_send(message['peer_id'], 'приветствую\n'
                                                                  'для полной функциональности мне нужна админка\n'
                                                                  'после того как повысите меня введите команду\n'
                                                                  '"/update" чтобы обновить конфигурацию беседы')
-                                update_chat_settings('register_chat', '0', message['peer_id'])
+                                update_chat_settings('register_chat', message['peer_id'], message['peer_id'])
                             elif True:
                                 check_ban(message['peer_id'], message['action']['member_id'], message['from_id'])
                             else:
