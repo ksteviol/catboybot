@@ -123,7 +123,7 @@ def check_ban(peer_id, user_id, from_id):
     with open(chat_path, 'r') as read_chat_settings:
         data = json.load(read_chat_settings)
     if str(user_id) in data['banned']:
-        if not check_admin(peer_id, from_id) is True:
+        if not check_admin(peer_id, from_id):
             remove_chat_user(peer_id, 0, user_id, 'autoban')
         else:
             message_send(peer_id, 'администратор пригласил забаненного участника\n'
@@ -193,7 +193,7 @@ def remove_chat_user(peer_id, text, from_id, type):
             update_chat_settings('unmute', from_id, peer_id)
             update_chat_settings('ban', from_id, peer_id)
         return True
-    elif check_admin(peer_id, from_id) is True:
+    elif check_admin(peer_id, from_id):
         user_id = re.findall(r'\d+', text)
         user_id = [int(i) for i in user_id]
         user_id = user_id[0]
@@ -231,7 +231,7 @@ def mute_end(peer_id, text, user_id, first_name):
 
 
 def mute_chat_user(peer_id, from_id, text, key):
-    if check_admin(peer_id, from_id) is True:
+    if check_admin(peer_id, from_id):
         print(text)
         user_id = re.findall(r'\d+', text)
         user_id = [int(i) for i in user_id if i.isdigit()]
@@ -239,7 +239,7 @@ def mute_chat_user(peer_id, from_id, text, key):
         user_id = user_id[0]
         print(user_id)
         print(minutes)
-        if check_admin(peer_id, user_id) is True:
+        if check_admin(peer_id, user_id):
             message_send(peer_id, 'невозможно выдать мут старшему администратору')
         else:
             data = {
@@ -272,7 +272,7 @@ def unmute_chat_user(peer_id, from_id, text, key):
     user_id = re.findall(r'\d+', text)
     user_id = [int(i) for i in user_id if i.isdigit()]
     user_id = user_id[0]
-    if check_admin(peer_id, from_id) is True:
+    if check_admin(peer_id, from_id):
         if update_chat_settings('unmute', str(user_id), peer_id):
             data = {
                 'user_ids': user_id,
