@@ -90,6 +90,7 @@ def update_chat_settings(record_type, record, peer_id):
         elif record_type == 'mute':
             if record not in data['muted']:
                 data['muted'].append(record)
+                message_send(peer_id, )
             elif record in data['muted']:
                 pass
         elif record_type == 'unban':
@@ -345,7 +346,9 @@ def check_message(message):
     peer_id = message['peer_id']
     from_id = message['from_id']
     text = text.replace('.', '')
-    if '/' in text:
+    if not text:
+        return True
+    elif text[0] == '/':
         if 'кик' in text or 'kick' in text:
             remove_chat_user(peer_id, text, from_id, 'kick')
         elif 'разбан' in text or 'unban' in text:
